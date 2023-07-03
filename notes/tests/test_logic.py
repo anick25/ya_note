@@ -19,22 +19,21 @@ class TestLogic(TestCase):
         cls.author = User.objects.create(username='Автор заметки')
         cls.note_data = {'title':'Заголовок', 'text': 'Текст', 'slug': 'text', 'author': cls.author}
         cls.note_data_without_slug = {'title': 'Заголовок', 'text': 'Текст', 'author': cls.author}
+        cls.add_url = reverse('notes:add')
 
     def test_create_note(self):
-        url = reverse('notes:add')
-        self.client.post(url, data=self.note_data)
+        self.client.post(self.add_url, data=self.note_data)
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 0)
         self.client.force_login(self.author)
-        self.client.post(url, data=self.note_data)
+        self.client.post(self.add_url, data=self.note_data)
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 1)
 
     def test_create_note_with_similar_slug(self):
-        url = reverse('notes:add')
         self.client.force_login(self.author)
-        self.client.post(url, data=self.note_data)
-        response = self.client.post(url, data=self.note_data)
+        self.client.post(self.add_url, data=self.note_data)
+        response = self.client.post(self.add_url, data=self.note_data)
         self.assertFormError(
             response,
             form='form',
@@ -45,9 +44,8 @@ class TestLogic(TestCase):
         self.assertEqual(notes_count, 1)
 
     def test_slug(self):
-        url = reverse('notes:add')
         self.client.force_login(self.author)
-        self.client.post(url, data=self.note_data_without_slug)
+        self.client.post(self.add_url, data=self.note_data_without_slug)
         note = Note.objects.get(pk=1)
         note_slug = note.slug
         note_title = note.title
@@ -67,21 +65,21 @@ class TestEditDeleteNote(TestCase):
         cls.edit_url = reverse('notes:edit', args = (cls.note.slug,))
         cls.form_data = {'text': cls.NEW_NOTE_TEXT, 'title':'Заголовок', 'slug': 'text', 'author': cls.author}
 
-    def test_author_can_delete_comment(self):
+    def test_author_can_delete_note(self):
         self.client.force_login(self.author)
         response = self.client.delete(self.delete_url)
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 0)
 
 
-    def test_user_can_delete_author_comment(self):
+    def test_user_can_delete_author_note(self):
         self.client.force_login(self.reader)
         response = self.client.delete(self.delete_url)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         notes_count = Note.objects.count()
         self.assertEqual(notes_count, 1)
 
-    def test_author_can_edit_comment(self):
+    def test_author_can_edit_note(self):
         self.client.force_login(self.author)
         response = self.client.post(self.edit_url, data=self.form_data)
         self.note.refresh_from_db()
